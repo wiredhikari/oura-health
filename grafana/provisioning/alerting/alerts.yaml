@@ -1,0 +1,216 @@
+# Grafana 11 unified-alerting provisioning.
+# These rules fire when something changes in your physiology that you'd want
+# to react to within a day — not an hour. They live in the "Oura" folder and
+# route to the "oura-log" contact point (a webhook stub you can replace with
+# Slack/Discord/Pushover).
+apiVersion: 1
+
+groups:
+  - orgId: 1
+    name: health_early_warning
+    folder: Oura
+    interval: 1h
+    rules:
+
+      # ------------------------------------------------------------------
+      # Illness early-warning: HRV drop >1.5 SD below 60d baseline
+      # + body temperature deviation > 0.30 °C on the same night.
+      # Classic "you're getting sick" signature per Oura Labs data.
+      # ------------------------------------------------------------------
+      - uid: oura-illness-signal
+        title: Illness early-warning
+        condition: C
+        for: 1h
+        noDataState: OK
+        execErrState: OK
+        labels:
+          severity: warning
+          source: oura
+        annotations:
+          summary: "HRV is {{ $values.A.Value }} ms vs 60d avg; temp Δ {{ $values.B.Value }} °C"
+          description: |
+            Last night's HRV fell >1.5 SD below the 60-day baseline AND body
+            temperature deviation exceeded +0.30 °C. Both together are the
+            strongest illness prodrome signal in the Oura dataset.
+
+            Action: drop training load to Z1/Z2 only for 48h, sleep ≥ 8h,
+            and consider a COVID/flu test if symptoms appear.
+        data:
+          - refId: A
+            relativeTimeRange: { from: 172800, to: 0 } # 2d
+            datasourceUid: timescaledb
+            model:
+              refId: A
+              format: table
+              rawSql: |
+                SELECT hrv_last AS value
+                FROM (
+                  SELECT h.rmssd_avg AS hrv_last,
+                         v.rmssd_avg_60d AS baseline,
+                         v.rmssd_sd_60d AS sd
+                  FROM hrv_daily h
+                  JOIN v_hrv_rolling v USING (day)
+                  ORDER BY h.day DESC
+                  LIMIT 1
+                ) x
+                WHERE hrv_last < baseline - 1.5 * sd
+          - refId: B
+            relativeTimeRange: { from: 172800, to: 0 }
+            datasourceUid: timescaledb
+            model:
+              refId: B
+              format: table
+              rawSql: |
+                SELECT temperature_deviation AS value
+                FROM daily_sleep
+                WHERE temperature_deviation > 0.30
+                ORDER BY day DESC
+                LIMIT 1
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: math
+              expression: "$A > 0 && $B > 0"
+
+      # ------------------------------------------------------------------
+      # Overtraining: resting HR elevated vs 30d baseline for 3+ days,
+      # AND HRV trending down over the same window.
+      # ------------------------------------------------------------------
+      - uid: oura-overtraining
+        title: Overtraining risk
+        condition: C
+        for: 2h
+        noDataState: OK
+        execErrState: OK
+        labels:
+          severity: warning
+          source: oura
+        annotations:
+          summary: "RHR up and HRV down for 3+ consecutive days"
+          description: |
+            Nightly lowest HR has been ≥ +3 bpm above 30d baseline and HRV has
+            been below baseline for 3 days running. Classic autonomic
+            overreach.
+
+            Action: insert an unload day (walk/mobility only), push sleep,
+            re-evaluate in 48h. If TSB < -20 also drop the current training
+            block intensity by one notch.
+        data:
+          - refId: A
+            relativeTimeRange: { from: 604800, to: 0 } # 7d
+            datasourceUid: timescaledb
+            model:
+              refId: A
+              format: table
+              rawSql: |
+                WITH recent AS (
+                  SELECT day, rhr_nightly, hrv_rmssd
+                  FROM v_daily
+                  WHERE day >= CURRENT_DATE - INTERVAL '7 days'
+                ),
+                base AS (
+                  SELECT AVG(rhr_nightly) AS rhr_base,
+                         AVG(hrv_rmssd)   AS hrv_base
+                  FROM v_daily
+                  WHERE day BETWEEN CURRENT_DATE - INTERVAL '37 days'
+                               AND CURRENT_DATE - INTERVAL '7 days'
+                )
+                SELECT COUNT(*) AS value
+                FROM recent, base
+                WHERE rhr_nightly >= rhr_base + 3
+                  AND hrv_rmssd   <  hrv_base
+                  AND day >= CURRENT_DATE - INTERVAL '3 days'
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              conditions:
+                - evaluator: { type: gt, params: [2] }
+              expression: A
+
+      # ------------------------------------------------------------------
+      # Sleep debt: total sleep time < 6.5h for 4 of the last 7 nights.
+      # Strongly predicts next-day CVA creeping back up.
+      # ------------------------------------------------------------------
+      - uid: oura-sleep-debt
+        title: Sleep debt accumulating
+        condition: C
+        for: 1h
+        noDataState: OK
+        execErrState: OK
+        labels:
+          severity: info
+          source: oura
+        annotations:
+          summary: "Short sleep on {{ $values.A.Value }}/7 recent nights"
+          description: |
+            You've slept < 6.5h on 4+ of the last 7 nights. CVA typically
+            drifts +0.5 in the week following this pattern.
+
+            Action: block a 22:30 lights-out window for 3 nights, zero
+            caffeine after 13:00, and defer hard intervals 24h.
+        data:
+          - refId: A
+            relativeTimeRange: { from: 604800, to: 0 }
+            datasourceUid: timescaledb
+            model:
+              refId: A
+              format: table
+              rawSql: |
+                SELECT COUNT(*)::int AS value
+                FROM daily_sleep
+                WHERE day >= CURRENT_DATE - INTERVAL '7 days'
+                  AND total_sleep_sec < 6.5 * 3600
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              conditions:
+                - evaluator: { type: gt, params: [3] }
+              expression: A
+
+      # ------------------------------------------------------------------
+      # CVA regression: 7d-rolling vascular age has drifted +1.0 or more
+      # from the best value seen in the last 30 days. Catch a backslide early.
+      # ------------------------------------------------------------------
+      - uid: oura-cva-regression
+        title: CVA trending back up
+        condition: C
+        for: 6h
+        noDataState: OK
+        execErrState: OK
+        labels:
+          severity: info
+          source: oura
+        annotations:
+          summary: "CVA 7d-avg is {{ $values.A.Value }} above best 30d value"
+          description: |
+            Your 7-day rolling vascular age has moved ≥ +1.0 off its best
+            value in the past 30 days. Time to audit the last week:
+            interventions adhered to? Zone-2 volume hit? Sleep intact?
+        data:
+          - refId: A
+            relativeTimeRange: { from: 2592000, to: 0 } # 30d
+            datasourceUid: timescaledb
+            model:
+              refId: A
+              format: table
+              rawSql: |
+                SELECT (current_7d - best_7d) AS value
+                FROM (
+                  SELECT
+                    (SELECT cva_7d FROM v_cva_rolling ORDER BY day DESC LIMIT 1) AS current_7d,
+                    (SELECT MIN(cva_7d) FROM v_cva_rolling
+                     WHERE day >= CURRENT_DATE - INTERVAL '30 days') AS best_7d
+                ) t
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              conditions:
+                - evaluator: { type: gt, params: [1.0] }
+              expression: A

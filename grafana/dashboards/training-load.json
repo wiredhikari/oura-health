@@ -1,0 +1,343 @@
+{
+  "annotations": {"list": []},
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "panels": [
+    {
+      "id": 100,
+      "type": "row",
+      "title": "Load Snapshot",
+      "gridPos": {"h": 1, "w": 24, "x": 0, "y": 0},
+      "collapsed": false
+    },
+    {
+      "id": 1,
+      "type": "stat",
+      "title": "Acute Load (7d)",
+      "description": "ATL — short-term fatigue. Higher = more recent strain.",
+      "gridPos": {"h": 6, "w": 6, "x": 0, "y": 1},
+      "datasource": {"type": "postgres", "uid": "timescaledb"},
+      "targets": [{
+        "refId": "A",
+        "format": "time_series",
+        "rawSql": "SELECT day::timestamptz AS time, atl AS value FROM v_training_load WHERE day >= CURRENT_DATE - INTERVAL '60 days' ORDER BY day"
+      }],
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false},
+        "textMode": "value"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 1,
+          "color": {"mode": "continuous-YlOrRd"}
+        }
+      }
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Chronic Load (42d)",
+      "description": "CTL — your fitness base. Target: rising steadily.",
+      "gridPos": {"h": 6, "w": 6, "x": 6, "y": 1},
+      "datasource": {"type": "postgres", "uid": "timescaledb"},
+      "targets": [{
+        "refId": "A",
+        "format": "time_series",
+        "rawSql": "SELECT day::timestamptz AS time, ctl AS value FROM v_training_load WHERE day >= CURRENT_DATE - INTERVAL '90 days' ORDER BY day"
+      }],
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false},
+        "textMode": "value"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 1,
+          "color": {"mode": "continuous-BlPu"}
+        }
+      }
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "Training Stress Balance",
+      "description": "TSB = CTL − ATL.   Positive → fresh.   < −20 → deep fatigue.",
+      "gridPos": {"h": 6, "w": 6, "x": 12, "y": 1},
+      "datasource": {"type": "postgres", "uid": "timescaledb"},
+      "targets": [{
+        "refId": "A",
+        "format": "time_series",
+        "rawSql": "SELECT day::timestamptz AS time, tsb AS value FROM v_training_load WHERE day >= CURRENT_DATE - INTERVAL '60 days' ORDER BY day"
+      }],
+      "options": {
+        "colorMode": "background",
+        "graphMode": "area",
+        "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false},
+        "textMode": "value"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 1,
+          "color": {"mode": "thresholds"},
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "dark-red", "value": null},
+              {"color": "red", "value": -20},
+              {"color": "yellow", "value": -10},
+              {"color": "green", "value": 0},
+              {"color": "blue", "value": 10}
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "Weekly active minutes",
+      "description": "Medium + high intensity minutes across the last 7 days. Target ≥150.",
+      "gridPos": {"h": 6, "w": 6, "x": 18, "y": 1},
+      "datasource": {"type": "postgres", "uid": "timescaledb"},
+      "targets": [{
+        "refId": "A",
+        "format": "table",
+        "rawSql": "SELECT SUM(high_min + medium_min) AS value FROM met_daily WHERE day >= (CURRENT_DATE - INTERVAL '7 days')::timestamptz"
+      }],
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false},
+        "textMode": "value"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "m",
+          "decimals": 0,
+          "color": {"mode": "thresholds"},
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "red", "value": null},
+              {"color": "orange", "value": 75},
+              {"color": "yellow", "value": 120},
+              {"color": "green", "value": 150}
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 101,
+      "type": "row",
+      "title": "Performance Management Chart",
+      "gridPos": {"h": 1, "w": 24, "x": 0, "y": 7},
+      "collapsed": false
+    },
+    {
+      "id": 5,
+      "type": "timeseries",
+      "title": "ATL / CTL / TSB — Banister model",
+      "description": "Classic coach's chart. CTL rising = getting fitter. TSB deep negative = overreached.",
+      "gridPos": {"h": 12, "w": 24, "x": 0, "y": 8},
+      "datasource": {"type": "postgres", "uid": "timescaledb"},
+      "targets": [{
+        "refId": "A",
+        "format": "time_series",
+        "rawSql": "SELECT day::timestamptz AS time, atl AS \"ATL (acute)\", ctl AS \"CTL (chronic)\", tsb AS \"TSB (form)\" FROM v_training_load WHERE $__timeFilter(day::timestamptz) ORDER BY day"
+      }],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "spanNulls": true,
+            "fillOpacity": 15,
+            "gradientMode": "opacity",
+            "lineWidth": 2
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {"id": "byName", "options": "ATL (acute)"},
+            "properties": [
+              {"id": "color", "value": {"mode": "fixed", "fixedColor": "orange"}}
+            ]
+          },
+          {
+            "matcher": {"id": "byName", "options": "CTL (chronic)"},
+            "properties": [
+              {"id": "color", "value": {"mode": "fixed", "fixedColor": "purple"}},
+              {"id": "custom.lineWidth", "value": 3}
+            ]
+          },
+          {
+            "matcher": {"id": "byName", "options": "TSB (form)"},
+            "properties": [
+              {"id": "custom.axisPlacement", "value": "right"},
+              {"id": "color", "value": {"mode": "fixed", "fixedColor": "green"}}
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {"displayMode": "list", "placement": "bottom", "showLegend": true},
+        "tooltip": {"mode": "multi"}
+      }
+    },
+    {
+      "id": 102,
+      "type": "row",
+      "title": "Breakdown",
+      "gridPos": {"h": 1, "w": 24, "x": 0, "y": 20},
+      "collapsed": false
+    },
+    {
+      "id": 6,
+      "type": "barchart",
+      "title": "MET-minutes by intensity (daily)",
+      "description": "Stacked: sedentary / low / medium / high. Green = where the CVA gains live.",
+      "gridPos": {"h": 10, "w": 12, "x": 0, "y": 21},
+      "datasource": {"type": "postgres", "uid": "timescaledb"},
+      "targets": [{
+        "refId": "A",
+        "format": "time_series",
+        "rawSql": "SELECT day AS time, high_min AS \"High\", medium_min AS \"Medium\", low_min AS \"Low\" FROM met_daily WHERE $__timeFilter(day) ORDER BY day"
+      }],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "m",
+          "custom": {
+            "lineWidth": 0,
+            "fillOpacity": 90,
+            "gradientMode": "hue"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {"id": "byName", "options": "High"},
+            "properties": [{"id": "color", "value": {"mode": "fixed", "fixedColor": "red"}}]
+          },
+          {
+            "matcher": {"id": "byName", "options": "Medium"},
+            "properties": [{"id": "color", "value": {"mode": "fixed", "fixedColor": "orange"}}]
+          },
+          {
+            "matcher": {"id": "byName", "options": "Low"},
+            "properties": [{"id": "color", "value": {"mode": "fixed", "fixedColor": "yellow"}}]
+          }
+        ]
+      },
+      "options": {
+        "orientation": "auto",
+        "stacking": "normal",
+        "showValue": "never",
+        "legend": {"displayMode": "list", "placement": "bottom", "showLegend": true},
+        "tooltip": {"mode": "multi"}
+      }
+    },
+    {
+      "id": 7,
+      "type": "timeseries",
+      "title": "Resting HR vs. Acute Load",
+      "description": "Rising RHR with rising ATL is the classic overreaching signal.",
+      "gridPos": {"h": 10, "w": 12, "x": 12, "y": 21},
+      "datasource": {"type": "postgres", "uid": "timescaledb"},
+      "targets": [{
+        "refId": "A",
+        "format": "time_series",
+        "rawSql": "SELECT v.day::timestamptz AS time, v.nightly_rhr AS \"RHR (bpm)\", v.atl AS \"ATL\" FROM v_daily v WHERE $__timeFilter(v.day::timestamptz) ORDER BY v.day"
+      }],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "spanNulls": true,
+            "fillOpacity": 10,
+            "lineWidth": 2
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {"id": "byName", "options": "ATL"},
+            "properties": [
+              {"id": "custom.axisPlacement", "value": "right"},
+              {"id": "color", "value": {"mode": "fixed", "fixedColor": "orange"}}
+            ]
+          },
+          {
+            "matcher": {"id": "byName", "options": "RHR (bpm)"},
+            "properties": [
+              {"id": "color", "value": {"mode": "fixed", "fixedColor": "purple"}}
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {"displayMode": "list", "placement": "bottom", "showLegend": true},
+        "tooltip": {"mode": "multi"}
+      }
+    },
+    {
+      "id": 103,
+      "type": "row",
+      "title": "Workout Log",
+      "gridPos": {"h": 1, "w": 24, "x": 0, "y": 31},
+      "collapsed": false
+    },
+    {
+      "id": 8,
+      "type": "table",
+      "title": "Recent workouts",
+      "gridPos": {"h": 10, "w": 24, "x": 0, "y": 32},
+      "datasource": {"type": "postgres", "uid": "timescaledb"},
+      "targets": [{
+        "refId": "A",
+        "format": "table",
+        "rawSql": "SELECT day AS \"Day\", activity AS \"Activity\", intensity AS \"Intensity\", ROUND(EXTRACT(EPOCH FROM (end_datetime - start_datetime))/60) AS \"Duration (min)\", calories AS \"kcal\", distance AS \"Distance (m)\", label AS \"Label\" FROM workout WHERE $__timeFilter(start_datetime) ORDER BY start_datetime DESC LIMIT 50"
+      }],
+      "options": {"showHeader": true},
+      "fieldConfig": {
+        "defaults": {
+          "custom": {"align": "auto"}
+        },
+        "overrides": [
+          {
+            "matcher": {"id": "byName", "options": "Intensity"},
+            "properties": [
+              {"id": "custom.cellOptions", "value": {"type": "color-background", "mode": "gradient"}},
+              {
+                "id": "mappings",
+                "value": [
+                  {"type": "value", "options": {"easy":     {"color": "green",  "index": 0, "text": "Easy"}}},
+                  {"type": "value", "options": {"moderate": {"color": "yellow", "index": 1, "text": "Moderate"}}},
+                  {"type": "value", "options": {"hard":     {"color": "red",    "index": 2, "text": "Hard"}}}
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "refresh": "30m",
+  "schemaVersion": 38,
+  "tags": ["oura", "training"],
+  "templating": {"list": []},
+  "time": {"from": "now-90d", "to": "now"},
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "Training Load",
+  "uid": "oura-training",
+  "version": 1,
+  "weekStart": ""
+}

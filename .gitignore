@@ -1,0 +1,26 @@
+# secrets — local only, never commit
+.env
+.env.local
+*.env.local
+
+# local data volumes
+grafana-data/
+postgres-data/
+
+# python build artefacts
+sync/__pycache__/
+**/__pycache__/
+*.pyc
+*.pyo
+
+# backups
+backups/
+
+# os cruft
+.DS_Store
+Thumbs.db
+
+# editor
+.idea/
+.vscode/
+*.swp

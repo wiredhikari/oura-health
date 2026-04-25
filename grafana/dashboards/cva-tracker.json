@@ -1,0 +1,327 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "datasource": {"type": "postgres", "uid": "timescaledb"},
+        "enable": true,
+        "iconColor": "rgba(255, 96, 96, 0.9)",
+        "name": "Interventions",
+        "rawQuery": "SELECT start_day::timestamptz AS time, end_day::timestamptz AS timeend, name AS text, category AS tags FROM v_active_interventions WHERE $__timeFilter(start_day::timestamptz)",
+        "target": {"refId": "Anno"}
+      }
+    ]
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "panels": [
+    {
+      "id": 1,
+      "type": "stat",
+      "title": "CVA — 14-day rolling",
+      "gridPos": {"h": 5, "w": 6, "x": 0, "y": 0},
+      "datasource": {"type": "postgres", "uid": "timescaledb"},
+      "targets": [{
+        "refId": "A",
+        "format": "table",
+        "rawSql": "SELECT cva_14d AS value FROM v_cva_rolling WHERE cva_14d IS NOT NULL ORDER BY day DESC LIMIT 1"
+      }],
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false},
+        "textMode": "value"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 2,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "green", "value": null},
+              {"color": "yellow", "value": 0},
+              {"color": "orange", "value": 3},
+              {"color": "red", "value": 6}
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "7-day Δ",
+      "gridPos": {"h": 5, "w": 6, "x": 6, "y": 0},
+      "datasource": {"type": "postgres", "uid": "timescaledb"},
+      "targets": [{
+        "refId": "A",
+        "format": "table",
+        "rawSql": "WITH latest AS (SELECT cva_14d FROM v_cva_rolling WHERE cva_14d IS NOT NULL ORDER BY day DESC LIMIT 1), prior AS (SELECT cva_14d FROM v_cva_rolling WHERE cva_14d IS NOT NULL ORDER BY day DESC OFFSET 7 LIMIT 1) SELECT (latest.cva_14d - prior.cva_14d)::NUMERIC(5,2) AS delta FROM latest, prior"
+      }],
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false},
+        "textMode": "value"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 2,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "green", "value": null},
+              {"color": "yellow", "value": 0},
+              {"color": "red", "value": 0.5}
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "Today's raw CVA",
+      "gridPos": {"h": 5, "w": 6, "x": 12, "y": 0},
+      "datasource": {"type": "postgres", "uid": "timescaledb"},
+      "targets": [{
+        "refId": "A",
+        "format": "table",
+        "rawSql": "SELECT vascular_age AS value FROM daily_cva ORDER BY day DESC LIMIT 1"
+      }],
+      "options": {
+        "colorMode": "background",
+        "graphMode": "area",
+        "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false},
+        "textMode": "value"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 1,
+          "color": {"mode": "thresholds"},
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "green", "value": null},
+              {"color": "yellow", "value": 0},
+              {"color": "red", "value": 4}
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "Days with data",
+      "gridPos": {"h": 5, "w": 6, "x": 18, "y": 0},
+      "datasource": {"type": "postgres", "uid": "timescaledb"},
+      "targets": [{
+        "refId": "A",
+        "format": "table",
+        "rawSql": "SELECT COUNT(*) AS value FROM daily_cva WHERE day >= CURRENT_DATE - INTERVAL '30 days'"
+      }],
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false},
+        "textMode": "value_and_name"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "red", "value": null},
+              {"color": "yellow", "value": 14},
+              {"color": "green", "value": 21}
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 5,
+      "type": "timeseries",
+      "title": "Cardiovascular Age trend",
+      "gridPos": {"h": 12, "w": 24, "x": 0, "y": 5},
+      "datasource": {"type": "postgres", "uid": "timescaledb"},
+      "targets": [
+        {
+          "refId": "A",
+          "format": "time_series",
+          "rawSql": "SELECT day::timestamptz AS time, vascular_age AS \"Raw CVA\" FROM daily_cva WHERE $__timeFilter(day::timestamptz) ORDER BY day"
+        },
+        {
+          "refId": "B",
+          "format": "time_series",
+          "rawSql": "SELECT day::timestamptz AS time, cva_7d AS \"7-day\", cva_14d AS \"14-day\", cva_30d AS \"30-day\" FROM v_cva_rolling WHERE $__timeFilter(day::timestamptz) ORDER BY day"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "fillOpacity": 0,
+            "spanNulls": true,
+            "pointSize": 4,
+            "axisSoftMin": -8,
+            "axisSoftMax": 8
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [{"color": "transparent", "value": null}]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {"id": "byName", "options": "Raw CVA"},
+            "properties": [
+              {"id": "custom.drawStyle", "value": "points"},
+              {"id": "custom.pointSize", "value": 5},
+              {"id": "color", "value": {"mode": "fixed", "fixedColor": "gray"}}
+            ]
+          },
+          {
+            "matcher": {"id": "byName", "options": "14-day"},
+            "properties": [
+              {"id": "custom.lineWidth", "value": 3},
+              {"id": "color", "value": {"mode": "fixed", "fixedColor": "red"}}
+            ]
+          },
+          {
+            "matcher": {"id": "byName", "options": "7-day"},
+            "properties": [
+              {"id": "color", "value": {"mode": "fixed", "fixedColor": "orange"}}
+            ]
+          },
+          {
+            "matcher": {"id": "byName", "options": "30-day"},
+            "properties": [
+              {"id": "color", "value": {"mode": "fixed", "fixedColor": "blue"}}
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {"displayMode": "list", "placement": "bottom", "showLegend": true},
+        "tooltip": {"mode": "multi", "sort": "none"}
+      }
+    },
+    {
+      "id": 6,
+      "type": "timeseries",
+      "title": "HRV 7-day vs. CVA 14-day (dual axis)",
+      "gridPos": {"h": 10, "w": 12, "x": 0, "y": 17},
+      "datasource": {"type": "postgres", "uid": "timescaledb"},
+      "targets": [{
+        "refId": "A",
+        "format": "time_series",
+        "rawSql": "SELECT day::timestamptz AS time, hrv_7d AS \"HRV 7d (ms)\", cva_14d AS \"CVA 14d (yrs)\" FROM v_daily WHERE $__timeFilter(day::timestamptz) ORDER BY day"
+      }],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "spanNulls": true,
+            "fillOpacity": 10
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {"id": "byName", "options": "CVA 14d (yrs)"},
+            "properties": [
+              {"id": "custom.axisPlacement", "value": "right"},
+              {"id": "color", "value": {"mode": "fixed", "fixedColor": "red"}}
+            ]
+          },
+          {
+            "matcher": {"id": "byName", "options": "HRV 7d (ms)"},
+            "properties": [
+              {"id": "color", "value": {"mode": "fixed", "fixedColor": "green"}}
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {"displayMode": "list", "placement": "bottom", "showLegend": true},
+        "tooltip": {"mode": "multi"}
+      }
+    },
+    {
+      "id": 7,
+      "type": "timeseries",
+      "title": "Nightly Resting HR vs. CVA",
+      "gridPos": {"h": 10, "w": 12, "x": 12, "y": 17},
+      "datasource": {"type": "postgres", "uid": "timescaledb"},
+      "targets": [{
+        "refId": "A",
+        "format": "time_series",
+        "rawSql": "SELECT day::timestamptz AS time, nightly_rhr AS \"RHR (bpm)\", cva_14d AS \"CVA 14d (yrs)\" FROM v_daily WHERE $__timeFilter(day::timestamptz) ORDER BY day"
+      }],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "spanNulls": true,
+            "fillOpacity": 10
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {"id": "byName", "options": "CVA 14d (yrs)"},
+            "properties": [
+              {"id": "custom.axisPlacement", "value": "right"},
+              {"id": "color", "value": {"mode": "fixed", "fixedColor": "red"}}
+            ]
+          },
+          {
+            "matcher": {"id": "byName", "options": "RHR (bpm)"},
+            "properties": [
+              {"id": "color", "value": {"mode": "fixed", "fixedColor": "purple"}}
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {"displayMode": "list", "placement": "bottom", "showLegend": true},
+        "tooltip": {"mode": "multi"}
+      }
+    },
+    {
+      "id": 8,
+      "type": "table",
+      "title": "Active interventions (timebox)",
+      "gridPos": {"h": 8, "w": 24, "x": 0, "y": 27},
+      "datasource": {"type": "postgres", "uid": "timescaledb"},
+      "targets": [{
+        "refId": "A",
+        "format": "table",
+        "rawSql": "SELECT start_day AS \"Start\", COALESCE(end_day::text, 'active') AS \"End\", name AS \"Name\", category AS \"Category\", dose AS \"Dose\", notes AS \"Notes\" FROM v_active_interventions ORDER BY start_day DESC LIMIT 50"
+      }],
+      "options": {"showHeader": true}
+    }
+  ],
+  "refresh": "30m",
+  "schemaVersion": 38,
+  "tags": ["oura", "cva"],
+  "templating": {"list": []},
+  "time": {"from": "now-90d", "to": "now"},
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "CVA Tracker",
+  "uid": "oura-cva",
+  "version": 1,
+  "weekStart": ""
+}

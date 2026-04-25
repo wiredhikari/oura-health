@@ -1,0 +1,300 @@
+{
+  "annotations": {"list": []},
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "panels": [
+    {
+      "id": 100,
+      "type": "row",
+      "title": "Last Night",
+      "gridPos": {"h": 1, "w": 24, "x": 0, "y": 0},
+      "collapsed": false
+    },
+    {
+      "id": 1,
+      "type": "stat",
+      "title": "Total sleep",
+      "gridPos": {"h": 6, "w": 6, "x": 0, "y": 1},
+      "datasource": {"type": "postgres", "uid": "timescaledb"},
+      "targets": [{
+        "refId": "A",
+        "format": "time_series",
+        "rawSql": "SELECT day::timestamptz AS time, total_sleep AS value FROM daily_sleep WHERE day >= CURRENT_DATE - INTERVAL '30 days' ORDER BY day"
+      }],
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false},
+        "textMode": "value"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "decimals": 0,
+          "color": {"mode": "thresholds"},
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "red", "value": null},
+              {"color": "orange", "value": 21600},
+              {"color": "yellow", "value": 25200},
+              {"color": "green", "value": 27000}
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Sleep efficiency",
+      "description": "(Asleep / In bed) × 100. >88% is the target.",
+      "gridPos": {"h": 6, "w": 6, "x": 6, "y": 1},
+      "datasource": {"type": "postgres", "uid": "timescaledb"},
+      "targets": [{
+        "refId": "A",
+        "format": "time_series",
+        "rawSql": "SELECT day::timestamptz AS time, efficiency AS value FROM daily_sleep WHERE day >= CURRENT_DATE - INTERVAL '30 days' ORDER BY day"
+      }],
+      "options": {
+        "colorMode": "background",
+        "graphMode": "area",
+        "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false},
+        "textMode": "value"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "decimals": 0,
+          "color": {"mode": "thresholds"},
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "red", "value": null},
+              {"color": "orange", "value": 80},
+              {"color": "yellow", "value": 85},
+              {"color": "green", "value": 88}
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "Sleep latency",
+      "description": "Minutes to fall asleep. Sweet spot: 10–20 min.",
+      "gridPos": {"h": 6, "w": 6, "x": 12, "y": 1},
+      "datasource": {"type": "postgres", "uid": "timescaledb"},
+      "targets": [{
+        "refId": "A",
+        "format": "time_series",
+        "rawSql": "SELECT day::timestamptz AS time, latency AS value FROM daily_sleep WHERE day >= CURRENT_DATE - INTERVAL '30 days' ORDER BY day"
+      }],
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false},
+        "textMode": "value"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "decimals": 0,
+          "color": {"mode": "thresholds"},
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "green",  "value": null},
+              {"color": "yellow", "value": 1200},
+              {"color": "red",    "value": 1800}
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "Avg HRV (last night)",
+      "gridPos": {"h": 6, "w": 6, "x": 18, "y": 1},
+      "datasource": {"type": "postgres", "uid": "timescaledb"},
+      "targets": [{
+        "refId": "A",
+        "format": "time_series",
+        "rawSql": "SELECT day::timestamptz AS time, average_hrv AS value FROM sleep_session WHERE type IN ('long_sleep','sleep') AND day >= CURRENT_DATE - INTERVAL '30 days' ORDER BY day"
+      }],
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false},
+        "textMode": "value"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "decimals": 0,
+          "color": {"mode": "continuous-GrYlRd"}
+        }
+      }
+    },
+    {
+      "id": 101,
+      "type": "row",
+      "title": "Sleep Architecture",
+      "gridPos": {"h": 1, "w": 24, "x": 0, "y": 7},
+      "collapsed": false
+    },
+    {
+      "id": 5,
+      "type": "barchart",
+      "title": "Sleep stages per night (hours)",
+      "description": "Deep + REM are the recovery-critical stages. Aim for ≥1.5h deep, ≥1.5h REM.",
+      "gridPos": {"h": 11, "w": 24, "x": 0, "y": 8},
+      "datasource": {"type": "postgres", "uid": "timescaledb"},
+      "targets": [{
+        "refId": "A",
+        "format": "time_series",
+        "rawSql": "SELECT day AS time, deep_sleep::float/3600 AS \"Deep\", rem_sleep::float/3600 AS \"REM\", (total_sleep - deep_sleep - rem_sleep)::float/3600 AS \"Light\" FROM daily_sleep WHERE $__timeFilter(day) ORDER BY day"
+      }],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "h",
+          "decimals": 1,
+          "custom": {
+            "lineWidth": 0,
+            "fillOpacity": 95,
+            "gradientMode": "hue"
+          }
+        },
+        "overrides": [
+          {"matcher": {"id": "byName", "options": "Deep"},  "properties": [{"id": "color", "value": {"mode": "fixed", "fixedColor": "dark-blue"}}]},
+          {"matcher": {"id": "byName", "options": "REM"},   "properties": [{"id": "color", "value": {"mode": "fixed", "fixedColor": "purple"}}]},
+          {"matcher": {"id": "byName", "options": "Light"}, "properties": [{"id": "color", "value": {"mode": "fixed", "fixedColor": "blue"}}]}
+        ]
+      },
+      "options": {
+        "orientation": "auto",
+        "stacking": "normal",
+        "showValue": "never",
+        "legend": {"displayMode": "list", "placement": "bottom", "showLegend": true},
+        "tooltip": {"mode": "multi"}
+      }
+    },
+    {
+      "id": 102,
+      "type": "row",
+      "title": "Recovery Signals",
+      "gridPos": {"h": 1, "w": 24, "x": 0, "y": 19},
+      "collapsed": false
+    },
+    {
+      "id": 6,
+      "type": "timeseries",
+      "title": "Nightly HRV (7-day smoothed)",
+      "gridPos": {"h": 10, "w": 12, "x": 0, "y": 20},
+      "datasource": {"type": "postgres", "uid": "timescaledb"},
+      "targets": [{
+        "refId": "A",
+        "format": "time_series",
+        "rawSql": "SELECT day::timestamptz AS time, avg_hrv AS \"HRV (raw)\", hrv_7d AS \"HRV 7d\" FROM v_hrv_rolling WHERE $__timeFilter(day::timestamptz) ORDER BY day"
+      }],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "spanNulls": true,
+            "fillOpacity": 20,
+            "gradientMode": "opacity"
+          }
+        },
+        "overrides": [
+          {"matcher": {"id": "byName", "options": "HRV 7d"},  "properties": [{"id": "color", "value": {"mode": "fixed", "fixedColor": "green"}}, {"id": "custom.lineWidth", "value": 3}]},
+          {"matcher": {"id": "byName", "options": "HRV (raw)"}, "properties": [{"id": "color", "value": {"mode": "fixed", "fixedColor": "light-green"}}, {"id": "custom.drawStyle", "value": "points"}]}
+        ]
+      },
+      "options": {
+        "legend": {"displayMode": "list", "placement": "bottom", "showLegend": true},
+        "tooltip": {"mode": "multi"}
+      }
+    },
+    {
+      "id": 7,
+      "type": "timeseries",
+      "title": "Body temperature deviation",
+      "description": "Rolling Δ from baseline. |Δ|>0.5°C is an illness-onset signal.",
+      "gridPos": {"h": 10, "w": 12, "x": 12, "y": 20},
+      "datasource": {"type": "postgres", "uid": "timescaledb"},
+      "targets": [{
+        "refId": "A",
+        "format": "time_series",
+        "rawSql": "SELECT day::timestamptz AS time, temperature_deviation AS \"Δ (day)\", temperature_trend_deviation AS \"Δ (trend)\" FROM daily_readiness WHERE $__timeFilter(day::timestamptz) ORDER BY day"
+      }],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "celsius",
+          "decimals": 2,
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "spanNulls": true,
+            "fillOpacity": 25,
+            "gradientMode": "hue",
+            "lineWidth": 2
+          }
+        }
+      },
+      "options": {
+        "legend": {"displayMode": "list", "placement": "bottom", "showLegend": true},
+        "tooltip": {"mode": "multi"}
+      }
+    },
+    {
+      "id": 103,
+      "type": "row",
+      "title": "30-night Log",
+      "gridPos": {"h": 1, "w": 24, "x": 0, "y": 30},
+      "collapsed": false
+    },
+    {
+      "id": 8,
+      "type": "table",
+      "title": "Sleep sessions",
+      "gridPos": {"h": 12, "w": 24, "x": 0, "y": 31},
+      "datasource": {"type": "postgres", "uid": "timescaledb"},
+      "targets": [{
+        "refId": "A",
+        "format": "table",
+        "rawSql": "SELECT day AS \"Day\", bedtime_start AS \"Bedtime\", bedtime_end AS \"Wake\", ROUND(total_sleep_duration::numeric/60) AS \"Sleep (min)\", ROUND(deep_sleep_duration::numeric/60) AS \"Deep (min)\", ROUND(rem_sleep_duration::numeric/60) AS \"REM (min)\", efficiency AS \"Eff (%)\", average_hrv AS \"HRV\", lowest_heart_rate AS \"RHR\", average_breath AS \"Breath (rpm)\" FROM sleep_session WHERE type IN ('long_sleep','sleep') AND $__timeFilter(bedtime_start) ORDER BY bedtime_start DESC LIMIT 30"
+      }],
+      "options": {"showHeader": true},
+      "fieldConfig": {
+        "defaults": {"custom": {"align": "auto"}},
+        "overrides": [
+          {
+            "matcher": {"id": "byName", "options": "Eff (%)"},
+            "properties": [
+              {"id": "custom.cellOptions", "value": {"type": "color-background", "mode": "gradient"}},
+              {"id": "thresholds", "value": {"mode": "absolute", "steps": [{"color":"red","value":null},{"color":"orange","value":80},{"color":"yellow","value":85},{"color":"green","value":88}]}}
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "refresh": "30m",
+  "schemaVersion": 38,
+  "tags": ["oura", "sleep"],
+  "templating": {"list": []},
+  "time": {"from": "now-30d", "to": "now"},
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "Sleep Architecture",
+  "uid": "oura-sleep",
+  "version": 1,
+  "weekStart": "mon"
+}

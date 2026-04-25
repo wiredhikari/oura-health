@@ -1,0 +1,21 @@
+apiVersion: 1
+
+datasources:
+  - name: TimescaleDB
+    uid: timescaledb
+    type: postgres
+    access: proxy
+    url: ${POSTGRES_HOST:-timescaledb}:${POSTGRES_PORT:-5432}
+    database: ${POSTGRES_DB:-oura}
+    user: ${POSTGRES_USER:-oura}
+    secureJsonData:
+      password: ${POSTGRES_PASSWORD}
+    jsonData:
+      sslmode: disable          # set 'require' in production
+      postgresVersion: 1600     # Postgres 16
+      timescaledb: true
+      maxOpenConns: 25
+      maxIdleConns: 5
+      connMaxLifetime: 14400
+    isDefault: true
+    editable: true

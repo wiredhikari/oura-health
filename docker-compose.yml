@@ -1,0 +1,82 @@
+services:
+
+  timescaledb:
+    build: ./db
+    container_name: oura-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB:       ${POSTGRES_DB}
+      POSTGRES_USER:     ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    # Not exposed to the host by default. Uncomment to connect with psql/DBeaver.
+    # ports:
+    #   - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres-data:/home/postgres/pgdata/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 15
+
+  sync:
+    build: ./sync
+    container_name: oura-sync
+    restart: unless-stopped
+    depends_on:
+      timescaledb:
+        condition: service_healthy
+    environment:
+      OURA_PAT:          ${OURA_PAT}
+      POSTGRES_HOST:     timescaledb
+      POSTGRES_PORT:     5432
+      POSTGRES_DB:       ${POSTGRES_DB}
+      POSTGRES_USER:     ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      SYNC_SCHEDULE:     ${SYNC_SCHEDULE:-0 */3 * * *}
+      BACKFILL_DAYS:     ${BACKFILL_DAYS:-730}
+
+  grafana:
+    build: ./grafana
+    container_name: oura-grafana
+    restart: unless-stopped
+    depends_on:
+      timescaledb:
+        condition: service_healthy
+    environment:
+      # Admin login
+      GF_SECURITY_ADMIN_USER:     ${GF_SECURITY_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GF_SECURITY_ADMIN_PASSWORD:-admin}
+      GF_SERVER_ROOT_URL:         ${GF_SERVER_ROOT_URL:-http://localhost}
+      GF_SERVER_SERVE_FROM_SUB_PATH: "false"
+      # Embed in iframes on same origin
+      GF_SECURITY_ALLOW_EMBEDDING: "true"
+      GF_SECURITY_COOKIE_SAMESITE: "lax"
+      # Anonymous viewer so the landing-page embeds work without a login
+      GF_AUTH_ANONYMOUS_ENABLED:    "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE:   "Viewer"
+      GF_AUTH_ANONYMOUS_ORG_NAME:   "Main Org."
+      # Kiosk = clean panels
+      GF_USERS_DEFAULT_THEME:       "dark"
+      GF_USERS_HOME_PAGE:           "/d/oura-today"
+      # DB provisioning env vars (used by datasources/timescaledb.yaml)
+      POSTGRES_HOST:              timescaledb
+      POSTGRES_PORT:              5432
+      POSTGRES_DB:                ${POSTGRES_DB}
+      POSTGRES_USER:              ${POSTGRES_USER}
+      POSTGRES_PASSWORD:          ${POSTGRES_PASSWORD}
+    volumes:
+      - grafana-data:/var/lib/grafana
+
+  ui:
+    build: ./ui
+    container_name: oura-ui
+    restart: unless-stopped
+    depends_on:
+      - grafana
+    ports:
+      - "${UI_PORT:-8080}:80"
+
+volumes:
+  postgres-data:
+  grafana-data:

@@ -1,0 +1,381 @@
+{
+  "annotations": {"list": []},
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "panels": [
+    {
+      "id": 100,
+      "type": "row",
+      "title": "Today's Scores",
+      "gridPos": {"h": 1, "w": 24, "x": 0, "y": 0},
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "id": 1,
+      "type": "gauge",
+      "title": "Readiness",
+      "description": "Oura's overall recovery score (0–100). Green = ready to train.",
+      "gridPos": {"h": 7, "w": 6, "x": 0, "y": 1},
+      "datasource": {"type": "postgres", "uid": "timescaledb"},
+      "targets": [{
+        "refId": "A",
+        "format": "table",
+        "rawSql": "SELECT score AS value FROM daily_readiness ORDER BY day DESC LIMIT 1"
+      }],
+      "options": {
+        "showThresholdLabels": false,
+        "showThresholdMarkers": true,
+        "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "min": 0,
+          "max": 100,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "red", "value": null},
+              {"color": "orange", "value": 60},
+              {"color": "yellow", "value": 70},
+              {"color": "green", "value": 85}
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 2,
+      "type": "gauge",
+      "title": "Sleep",
+      "description": "Sleep score from last night (0–100).",
+      "gridPos": {"h": 7, "w": 6, "x": 6, "y": 1},
+      "datasource": {"type": "postgres", "uid": "timescaledb"},
+      "targets": [{
+        "refId": "A",
+        "format": "table",
+        "rawSql": "SELECT score AS value FROM daily_sleep ORDER BY day DESC LIMIT 1"
+      }],
+      "options": {
+        "showThresholdLabels": false,
+        "showThresholdMarkers": true,
+        "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "min": 0,
+          "max": 100,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "red", "value": null},
+              {"color": "orange", "value": 60},
+              {"color": "yellow", "value": 70},
+              {"color": "green", "value": 85}
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 3,
+      "type": "gauge",
+      "title": "Activity",
+      "description": "Daily activity score.",
+      "gridPos": {"h": 7, "w": 6, "x": 12, "y": 1},
+      "datasource": {"type": "postgres", "uid": "timescaledb"},
+      "targets": [{
+        "refId": "A",
+        "format": "table",
+        "rawSql": "SELECT score AS value FROM daily_activity ORDER BY day DESC LIMIT 1"
+      }],
+      "options": {
+        "showThresholdLabels": false,
+        "showThresholdMarkers": true,
+        "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "min": 0,
+          "max": 100,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "red", "value": null},
+              {"color": "orange", "value": 60},
+              {"color": "yellow", "value": 75},
+              {"color": "green", "value": 90}
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "Cardiovascular Age (14d)",
+      "description": "Your slow-moving CVA metric — target −3 to −4.",
+      "gridPos": {"h": 7, "w": 6, "x": 18, "y": 1},
+      "datasource": {"type": "postgres", "uid": "timescaledb"},
+      "targets": [{
+        "refId": "A",
+        "format": "time_series",
+        "rawSql": "SELECT day::timestamptz AS time, cva_14d AS value FROM v_cva_rolling WHERE day >= CURRENT_DATE - INTERVAL '30 days' ORDER BY day"
+      }],
+      "options": {
+        "colorMode": "background",
+        "graphMode": "area",
+        "justifyMode": "center",
+        "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false},
+        "textMode": "value"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 2,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "green", "value": null},
+              {"color": "yellow", "value": 0},
+              {"color": "red", "value": 5}
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 101,
+      "type": "row",
+      "title": "Recovery Signals",
+      "gridPos": {"h": 1, "w": 24, "x": 0, "y": 8},
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "id": 5,
+      "type": "stat",
+      "title": "Last night HRV",
+      "description": "Average RMSSD during sleep. Trend ↑ = recovery.",
+      "gridPos": {"h": 6, "w": 6, "x": 0, "y": 9},
+      "datasource": {"type": "postgres", "uid": "timescaledb"},
+      "targets": [{
+        "refId": "A",
+        "format": "time_series",
+        "rawSql": "SELECT day::timestamptz AS time, avg_hrv AS value FROM v_hrv_rolling WHERE day >= CURRENT_DATE - INTERVAL '30 days' ORDER BY day"
+      }],
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false},
+        "textMode": "value_and_name"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "decimals": 0,
+          "color": {"mode": "continuous-GrYlRd"}
+        }
+      }
+    },
+    {
+      "id": 6,
+      "type": "stat",
+      "title": "Resting HR",
+      "description": "Lowest heart rate from last night.",
+      "gridPos": {"h": 6, "w": 6, "x": 6, "y": 9},
+      "datasource": {"type": "postgres", "uid": "timescaledb"},
+      "targets": [{
+        "refId": "A",
+        "format": "time_series",
+        "rawSql": "SELECT day::timestamptz AS time, rhr AS value FROM v_rhr_nightly WHERE day >= CURRENT_DATE - INTERVAL '30 days' ORDER BY day"
+      }],
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false},
+        "textMode": "value_and_name"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 0,
+          "color": {"mode": "thresholds"},
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "green", "value": null},
+              {"color": "yellow", "value": 60},
+              {"color": "orange", "value": 70}
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 7,
+      "type": "stat",
+      "title": "Steps",
+      "description": "Today so far.",
+      "gridPos": {"h": 6, "w": 6, "x": 12, "y": 9},
+      "datasource": {"type": "postgres", "uid": "timescaledb"},
+      "targets": [{
+        "refId": "A",
+        "format": "time_series",
+        "rawSql": "SELECT day::timestamptz AS time, steps AS value FROM daily_activity WHERE day >= CURRENT_DATE - INTERVAL '14 days' ORDER BY day"
+      }],
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false},
+        "textMode": "value"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "color": {"mode": "thresholds"},
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "red", "value": null},
+              {"color": "orange", "value": 5000},
+              {"color": "yellow", "value": 8000},
+              {"color": "green", "value": 10000}
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 8,
+      "type": "stat",
+      "title": "Temperature Δ",
+      "description": "Deviation from your baseline body temperature. |Δ|>0.5 = possible illness.",
+      "gridPos": {"h": 6, "w": 6, "x": 18, "y": 9},
+      "datasource": {"type": "postgres", "uid": "timescaledb"},
+      "targets": [{
+        "refId": "A",
+        "format": "time_series",
+        "rawSql": "SELECT day::timestamptz AS time, temperature_deviation AS value FROM daily_readiness WHERE day >= CURRENT_DATE - INTERVAL '30 days' ORDER BY day"
+      }],
+      "options": {
+        "colorMode": "background",
+        "graphMode": "area",
+        "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false},
+        "textMode": "value"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "celsius",
+          "decimals": 2,
+          "color": {"mode": "thresholds"},
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "green", "value": null},
+              {"color": "yellow", "value": 0.3},
+              {"color": "red", "value": 0.5}
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 102,
+      "type": "row",
+      "title": "Intraday",
+      "gridPos": {"h": 1, "w": 24, "x": 0, "y": 15},
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "id": 9,
+      "type": "timeseries",
+      "title": "Heart Rate — last 24 hours",
+      "gridPos": {"h": 9, "w": 24, "x": 0, "y": 16},
+      "datasource": {"type": "postgres", "uid": "timescaledb"},
+      "targets": [{
+        "refId": "A",
+        "format": "time_series",
+        "rawSql": "SELECT ts AS time, bpm AS value, source AS metric FROM hr_intraday WHERE ts > NOW() - INTERVAL '24 hours' ORDER BY ts"
+      }],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "spanNulls": false,
+            "fillOpacity": 25,
+            "gradientMode": "opacity",
+            "lineWidth": 1,
+            "pointSize": 3,
+            "showPoints": "never"
+          },
+          "color": {"mode": "palette-classic"}
+        }
+      },
+      "options": {
+        "legend": {"displayMode": "list", "placement": "bottom", "showLegend": true},
+        "tooltip": {"mode": "multi", "sort": "desc"}
+      }
+    },
+    {
+      "id": 10,
+      "type": "timeseries",
+      "title": "MET intensity — last 24 hours",
+      "description": "Metabolic Equivalent per minute. Sedentary <1.5, Low 1.5–3, Med 3–6, High ≥6.",
+      "gridPos": {"h": 9, "w": 24, "x": 0, "y": 25},
+      "datasource": {"type": "postgres", "uid": "timescaledb"},
+      "targets": [{
+        "refId": "A",
+        "format": "time_series",
+        "rawSql": "SELECT ts AS time, met AS \"MET\" FROM activity_met WHERE ts > NOW() - INTERVAL '24 hours' ORDER BY ts"
+      }],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 1,
+          "custom": {
+            "drawStyle": "bars",
+            "lineInterpolation": "stepAfter",
+            "barAlignment": 0,
+            "fillOpacity": 80,
+            "gradientMode": "scheme",
+            "lineWidth": 0
+          },
+          "color": {"mode": "continuous-GrYlRd"},
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "transparent", "value": null},
+              {"color": "yellow", "value": 3},
+              {"color": "red", "value": 6}
+            ]
+          }
+        }
+      },
+      "options": {
+        "legend": {"displayMode": "hidden"},
+        "tooltip": {"mode": "single"}
+      }
+    }
+  ],
+  "refresh": "5m",
+  "schemaVersion": 38,
+  "tags": ["oura", "today"],
+  "templating": {"list": []},
+  "time": {"from": "now-24h", "to": "now"},
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "Today",
+  "uid": "oura-today",
+  "version": 1,
+  "weekStart": ""
+}
