@@ -80,7 +80,7 @@ services:
       JWT_SECRET:        ${JWT_SECRET}
       JWT_TTL_DAYS:      ${JWT_TTL_DAYS:-30}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
-      ANTHROPIC_MODEL:   ${ANTHROPIC_MODEL:-claude-sonnet-4-6}
+      ANTHROPIC_MODEL:   ${ANTHROPIC_MODEL:-claude-opus-4-6}
       USER_NAME:         ${USER_NAME:-you}
       USER_AGE:          ${USER_AGE:-0}
       USER_TIMEZONE:     ${USER_TIMEZONE:-UTC}
@@ -118,7 +118,7 @@ services:
       POSTGRES_USER:     ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
-      ANTHROPIC_MODEL:   ${ANTHROPIC_MODEL:-claude-sonnet-4-6}
+      ANTHROPIC_MODEL:   ${ANTHROPIC_MODEL:-claude-opus-4-6}
       RESEND_API_KEY:    ${RESEND_API_KEY:-}
       DIGEST_EMAIL_FROM: ${DIGEST_EMAIL_FROM:-digest@oura-health.local}
       DIGEST_EMAIL_TO:   ${DIGEST_EMAIL_TO:-}

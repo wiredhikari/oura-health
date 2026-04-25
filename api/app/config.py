@@ -20,7 +20,7 @@ class Settings(BaseSettings):
 
     # ── LLM ─────────────────────────────────────────────────────
     anthropic_api_key: str = ""
-    anthropic_model: str = "claude-sonnet-4-6"
+    anthropic_model: str = "claude-opus-4-6"
 
     # ── CORS ────────────────────────────────────────────────────
     # Set to your app's public URL on Railway, e.g.

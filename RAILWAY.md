@@ -220,7 +220,7 @@ Click **Deploy**.
 | `JWT_SECRET`        | (32+ random bytes — `openssl rand -hex 32` is fine)              |
 | `JWT_TTL_DAYS`      | `30`                                                             |
 | `ANTHROPIC_API_KEY` | `sk-ant-...` from <https://console.anthropic.com>                |
-| `ANTHROPIC_MODEL`   | `claude-sonnet-4-6`                                              |
+| `ANTHROPIC_MODEL`   | `claude-opus-4-6`                                                |
 | `USER_NAME`         | (your first name — used in LLM prompts)                          |
 | `USER_AGE`          | (number)                                                         |
 | `USER_TIMEZONE`     | `Asia/Kolkata` (or your IANA TZ)                                 |
@@ -279,7 +279,7 @@ Click **Deploy**. Once it boots, open the URL — you should land on
 | `POSTGRES_USER`     | `${{timescaledb.POSTGRES_USER}}`                             |
 | `POSTGRES_PASSWORD` | `${{timescaledb.POSTGRES_PASSWORD}}`                         |
 | `ANTHROPIC_API_KEY` | (same as `api`)                                              |
-| `ANTHROPIC_MODEL`   | `claude-sonnet-4-6`                                          |
+| `ANTHROPIC_MODEL`   | `claude-opus-4-6`                                            |
 | `RESEND_API_KEY`    | `re_...` from <https://resend.com> (optional — leave blank to skip email and only save to DB) |
 | `DIGEST_EMAIL_FROM` | `digest@your-verified-domain.com` (Resend verified sender)   |
 | `DIGEST_EMAIL_TO`   | (your inbox)                                                 |
