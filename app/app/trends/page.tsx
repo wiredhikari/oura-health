@@ -27,7 +27,7 @@ function Trends() {
       <div className="card card-pad">
         <p className="text-sm">
           Set <code className="text-accent">NEXT_PUBLIC_GRAFANA_URL</code> in
-          this app's Railway variables to your Grafana public domain so the
+          this app&apos;s Railway variables to your Grafana public domain so the
           power-user dashboards can render here.
         </p>
       </div>
