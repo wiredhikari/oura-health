@@ -1,0 +1,47 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg:        220 12% 97%;
+  --surface:   0 0% 100%;
+  --muted:     220 14% 95%;
+  --border:    220 13% 88%;
+  --text:      220 28% 11%;
+  --subtle:    220 12% 45%;
+  --accent:    248 60% 56%;
+  --positive:  158 68% 33%;
+  --warning:   34 90% 49%;
+  --negative:  10 73% 47%;
+}
+
+.dark {
+  --bg:        222 27% 6%;
+  --surface:   222 22% 9%;
+  --muted:     222 18% 13%;
+  --border:    222 16% 20%;
+  --text:      220 20% 96%;
+  --subtle:    220 14% 65%;
+  --accent:    248 76% 72%;
+  --positive:  158 56% 60%;
+  --warning:   34 90% 65%;
+  --negative:  10 78% 65%;
+}
+
+html, body { background: hsl(var(--bg)); color: hsl(var(--text)); }
+body { font-feature-settings: "ss01", "cv01", "cv11"; }
+
+.card { @apply bg-surface border border-border rounded-2xl; }
+.card-pad { @apply p-4 sm:p-5; }
+.metric-label { @apply text-xs text-subtle; }
+.metric-value { @apply text-2xl font-medium tracking-tight; }
+
+.scroll-fade {
+  mask-image: linear-gradient(to bottom, black 75%, transparent 100%);
+}
+
+button.q { @apply inline-flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg border border-border bg-surface hover:bg-muted transition-colors; }
+button.primary { @apply inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-text text-bg font-medium hover:opacity-90; }
+input.field, textarea.field, select.field {
+  @apply w-full bg-surface border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent/40;
+}

@@ -8,11 +8,11 @@ services:
       POSTGRES_DB:       ${POSTGRES_DB}
       POSTGRES_USER:     ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-    # Not exposed to the host by default. Uncomment to connect with psql/DBeaver.
+    # Not exposed to host by default. Uncomment to connect with psql/DBeaver.
     # ports:
     #   - "${POSTGRES_PORT:-5432}:5432"
     volumes:
-      - postgres-data:/home/postgres/pgdata/data
+      - postgres-data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 5s
@@ -44,38 +44,85 @@ services:
       timescaledb:
         condition: service_healthy
     environment:
-      # Admin login
       GF_SECURITY_ADMIN_USER:     ${GF_SECURITY_ADMIN_USER:-admin}
       GF_SECURITY_ADMIN_PASSWORD: ${GF_SECURITY_ADMIN_PASSWORD:-admin}
-      GF_SERVER_ROOT_URL:         ${GF_SERVER_ROOT_URL:-http://localhost}
-      GF_SERVER_SERVE_FROM_SUB_PATH: "false"
-      # Embed in iframes on same origin
+      GF_SERVER_ROOT_URL:         ${GF_SERVER_ROOT_URL:-http://localhost:3000}
+      GF_USERS_DEFAULT_THEME:     "dark"
+      GF_USERS_HOME_PAGE:         "/d/oura-today"
+      # Allow embedding so the app's Trends tab can iframe dashboards.
       GF_SECURITY_ALLOW_EMBEDDING: "true"
-      GF_SECURITY_COOKIE_SAMESITE: "lax"
-      # Anonymous viewer so the landing-page embeds work without a login
-      GF_AUTH_ANONYMOUS_ENABLED:    "true"
-      GF_AUTH_ANONYMOUS_ORG_ROLE:   "Viewer"
-      GF_AUTH_ANONYMOUS_ORG_NAME:   "Main Org."
-      # Kiosk = clean panels
-      GF_USERS_DEFAULT_THEME:       "dark"
-      GF_USERS_HOME_PAGE:           "/d/oura-today"
-      # DB provisioning env vars (used by datasources/timescaledb.yaml)
-      POSTGRES_HOST:              timescaledb
-      POSTGRES_PORT:              5432
-      POSTGRES_DB:                ${POSTGRES_DB}
-      POSTGRES_USER:              ${POSTGRES_USER}
-      POSTGRES_PASSWORD:          ${POSTGRES_PASSWORD}
+      GF_AUTH_ANONYMOUS_ENABLED:   "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE:  "Viewer"
+      POSTGRES_HOST:               timescaledb
+      POSTGRES_PORT:               5432
+      POSTGRES_DB:                 ${POSTGRES_DB}
+      POSTGRES_USER:               ${POSTGRES_USER}
+      POSTGRES_PASSWORD:           ${POSTGRES_PASSWORD}
+    ports:
+      - "${GRAFANA_PORT:-3000}:3000"
     volumes:
       - grafana-data:/var/lib/grafana
 
-  ui:
-    build: ./ui
-    container_name: oura-ui
+  api:
+    build: ./api
+    container_name: oura-api
     restart: unless-stopped
     depends_on:
-      - grafana
+      timescaledb:
+        condition: service_healthy
+    environment:
+      POSTGRES_HOST:     timescaledb
+      POSTGRES_PORT:     5432
+      POSTGRES_DB:       ${POSTGRES_DB}
+      POSTGRES_USER:     ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      APP_PASSCODE:      ${APP_PASSCODE}
+      JWT_SECRET:        ${JWT_SECRET}
+      JWT_TTL_DAYS:      ${JWT_TTL_DAYS:-30}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      ANTHROPIC_MODEL:   ${ANTHROPIC_MODEL:-claude-sonnet-4-6}
+      USER_NAME:         ${USER_NAME:-you}
+      USER_AGE:          ${USER_AGE:-0}
+      USER_TIMEZONE:     ${USER_TIMEZONE:-UTC}
+      CORS_ORIGIN:       ${CORS_ORIGIN:-*}
+      PORT:              "8000"
     ports:
-      - "${UI_PORT:-8080}:80"
+      - "${API_PORT:-8000}:8000"
+
+  app:
+    build: ./app
+    container_name: oura-app
+    restart: unless-stopped
+    depends_on:
+      - api
+    environment:
+      API_BASE_URL:            http://api:8000
+      NEXT_PUBLIC_GRAFANA_URL: ${NEXT_PUBLIC_GRAFANA_URL:-http://localhost:3000}
+      PORT:                    "3001"
+    ports:
+      - "${APP_PORT:-3001}:3001"
+
+  digest:
+    # On Railway this is a separate cron service. Locally, use `make digest`
+    # to fire it on demand: it runs once and exits.
+    build: ./digest
+    container_name: oura-digest
+    profiles: ["manual"]
+    depends_on:
+      timescaledb:
+        condition: service_healthy
+    environment:
+      POSTGRES_HOST:     timescaledb
+      POSTGRES_PORT:     5432
+      POSTGRES_DB:       ${POSTGRES_DB}
+      POSTGRES_USER:     ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      ANTHROPIC_MODEL:   ${ANTHROPIC_MODEL:-claude-sonnet-4-6}
+      RESEND_API_KEY:    ${RESEND_API_KEY:-}
+      DIGEST_EMAIL_FROM: ${DIGEST_EMAIL_FROM:-digest@oura-health.local}
+      DIGEST_EMAIL_TO:   ${DIGEST_EMAIL_TO:-}
+      USER_NAME:         ${USER_NAME:-you}
 
 volumes:
   postgres-data:

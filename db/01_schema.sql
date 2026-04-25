@@ -1,12 +1,11 @@
 -- Oura → TimescaleDB schema
--- Tested against Postgres 16 + TimescaleDB 2.14+ + pgvector 0.7+
+-- Tested against Postgres 16 + TimescaleDB 2.14+
 -- Run as:  psql -f 01_schema.sql
 -- Idempotent: safe to re-run.
 
 BEGIN;
 
 CREATE EXTENSION IF NOT EXISTS timescaledb;
-CREATE EXTENSION IF NOT EXISTS pgvector;
 
 -- ─────────────────────────────────────────────────────────────
 -- Daily summary tables (one row per UTC day, no hypertable needed)
