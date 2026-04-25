@@ -7,7 +7,9 @@ ENV GF_USERS_DEFAULT_THEME=dark \
     GF_USERS_HOME_PAGE=/d/oura-today
 
 COPY provisioning/ /etc/grafana/provisioning/
-COPY dashboards/   /var/lib/grafana/dashboards/
+# Dashboards must live OUTSIDE /var/lib/grafana, which Railway mounts as a
+# volume — the volume mount overlays anything baked into that path.
+COPY dashboards/   /etc/grafana/dashboards/
 
 # Railway mounts persistent volumes at /var/lib/grafana owned by root,
 # but the grafana base image runs as user 472. We need to chown the
